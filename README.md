@@ -22,8 +22,10 @@ bash utils/bowtie2.filt.sh $infq $filtfq
 ```
 
 # Prediction
-Use the trained model for the prediction.
+Use the trained model for the prediction. The current model can be downloaded from [here](https://people.beocat.ksu.edu/~liu3zhen/models/model_final.h5)
+
 ```
+h5model=<path_to_model>
 pred_prob_threshold=0.99
 python ../../../utils/minicPred.py \
    --model_path $h5model \
