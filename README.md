@@ -38,12 +38,12 @@ python ../../../utils/minicPred.py \
 ```
 
 # Prediction result
-Here is an example result. "mini_percent" is the value used to assess the presence of minis. The threshold is 0.015 using the current model.
+Here is an example result for the prediction using a FASTQ dataset. "mini_percent" is the value used to assess the presence of minis. The threshold is 0.015 using the current model. The value larger than the threshold evidences the presence of mini(s) in the strain.   
 ```
 data,totalSeq,mini,core,mini_percent,core_percent
 B71.R1.filt.fq.gz,14386540,473280,13913260,0.032897,0.967103
 ```
 
 # Citation
-
+<to be added>
 
