@@ -37,3 +37,13 @@ python ../../../utils/minicPred.py \
    --save_pred_seq
 ```
 
+# Prediction result
+Here is an example result. "mini_percent" is the value used to assess the presence of minis. The threshold is 0.015 using the current model.
+```
+data,totalSeq,mini,core,mini_percent,core_percent
+B71.R1.filt.fq.gz,14386540,473280,13913260,0.032897,0.967103
+```
+
+# Citation
+
+
