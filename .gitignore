@@ -1,2 +1,3 @@
-*.h5
-saved_model/*.h5
+models
+miniC_GitHub_old
+Nikesh

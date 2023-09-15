@@ -10,7 +10,7 @@ parser.add_argument('--train_csv', required=True, type=str, default=None,
                     help='path to the training dataset file eg: /home/user/mini_prediction/train.csv')
 parser.add_argument('--valid_csv', type=str, default=None,
                     help='path to the validation dataset file eg: /home/user/mini_prediction/valid.csv')
-parser.add_argument('--test_csv', type=str, default=None,
+parser.add_argument('--test_csv', required=True, type=str, default=None,
                     help='path to the test dataset file eg: /home/user/mini_prediction/train.csv')
 parser.add_argument('--output_dir', type=str, default='',
                     help='path to the results and log output folder. \
@@ -65,69 +65,9 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Bidirectional
 from tensorflow.keras.layers import Dropout
 from tensorflow import keras
-
+from sklearn.model_selection import train_test_split
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-def get_valid_dataset(df_valid):
-    y_valid = df_valid['label']
-    padded_valid = process_sequence(df_valid, kmer_count, kmers_dict)
-
-    x_valid = np.array(padded_valid)
-    y_valid = np.array(y_valid)
-
-    return x_valid, y_valid
-
-def process_sequence(df, sentence_length, kmer_mapping_dict):
-    """ Function to map kmers in a given sequence to a unique number"""
-
-    # Encode kmers to dense one hot encoding
-    one_hot_en_text = [([kmer_mapping_dict[x] for x in w.split()]) for w in list(df['sequence'])]
-
-    # Add padding at the end if the sequence is not of given sentence_length
-    padded_dataset = pad_sequences(one_hot_en_text, padding='post', maxlen=sentence_length)
-    return padded_dataset
-
-
-def generate_all_kmers(kmer_length):
-    """ Function to generate all possible kmers of given length"""
-    base_pairs = ['A', 'T', 'G', 'C']
-
-    # Generate all 4 ^ 7 possible combinations of Kmers and lookup
-    all_kmers = {"".join(x): idx + 1 for idx, x in enumerate(list(product(base_pairs, repeat=kmer_length)))}
-    return all_kmers
-
-
-class DataGenerator(tf.keras.utils.Sequence):
-    def __init__(self, df, batch_size=32, num_classes=None, shuffle=True):
-        self.batch_size = batch_size
-        self.df = df
-        self.indices = self.df.index.tolist()
-        self.num_classes = num_classes
-        self.shuffle = shuffle
-        self.on_epoch_end()
-
-    def __len__(self):
-        return len(self.indices) // self.batch_size
-
-    def __getitem__(self, index):
-        index = self.index[index * self.batch_size:(index + 1) * self.batch_size]
-        batch = [self.indices[k] for k in index]
-
-        X, y = self.__get_data(batch)
-        return X, y
-
-    def on_epoch_end(self):
-        self.index = np.arange(len(self.indices))
-        if self.shuffle == True:
-            np.random.shuffle(self.index)
-
-    def __get_data(self, batch):
-        X = self.df.iloc[batch]
-        y = np.array(X['label'])
-        padded_valid = process_sequence(X, kmer_count, kmers_dict)
-        return np.array(padded_valid), y
 
 
 class TrainingCallback(keras.callbacks.Callback):
@@ -151,6 +91,26 @@ def get_model(voc_size, embedding_vector_features, sentence_length):
     model.compile(loss=loss_fn, optimizer='adam', metrics=['accuracy', 'Precision', 'Recall'])
     model.summary()
     return model
+
+
+def generate_all_kmers(kmer_length):
+    """ Function to generate all possible kmers of given length"""
+    base_pairs = ['A', 'T', 'G', 'C']
+
+    # Generate all 4 ^ 7 possible combinations of Kmers and lookup
+    all_kmers = {"".join(x): idx + 1 for idx, x in enumerate(list(product(base_pairs, repeat=kmer_length)))}
+    return all_kmers
+
+
+def process_sequence(df, sentence_length, kmer_mapping_dict):
+    """ Function to map kmers in a given sequence to a unique number"""
+
+    # Encode kmers to dense one hot encoding
+    one_hot_en_text = [([kmer_mapping_dict[x] for x in w.split()]) for w in list(df['sequence'])]
+
+    # Add padding at the end if the sequence is not of given sentence_length
+    padded_dataset = pad_sequences(one_hot_en_text, padding='post', maxlen=sentence_length)
+    return padded_dataset
 
 
 def get_train_valid_df(train_file):
@@ -185,13 +145,69 @@ def get_train_valid_df(train_file):
     valid_df_size = int(0.05 * len(df))
     df_valid, df_train = df.iloc[:valid_df_size].copy(), df.iloc[valid_df_size:].copy()
 
+    # if args.retrain_model:
+    #     if not args.retrain_dataset_file:
+    #         print("Error! retrain_model is true but retraining dataset file is not given... exiting...")
+    #         logging.error("Error! retrain_model is true but retraining dataset file is not given... exiting...")
+    #         exit()
+    #
+    #     df_retrain = pd.read_csv(args.retrain_dataset_file, header=None, usecols=[0, 1, 2],
+    #                              names=['sequence', 'strain', 'label'])
+    #
+    #     logging.info("new mini training dataset size: {}".format(len(df_retrain)))
+    #     df_train = pd.concat([df_train, df_retrain], ignore_index=True)
+    #     df_train.reset_index(drop=True, inplace=True)
+
     logging.info("Validation size: {}, train size: {}".format(len(df_valid), len(df_train)))
     df_valid.reset_index(drop=True, inplace=True)
     df_train.reset_index(drop=True, inplace=True)
     return df_train, df_valid
 
 
+def get_valid_dataset(df_valid):
+    y_valid = df_valid['label']
+    padded_valid = process_sequence(df_valid, kmer_count, kmers_dict)
+
+    x_valid = np.array(padded_valid)
+    y_valid = np.array(y_valid)
+
+    return x_valid, y_valid
+
+
+class DataGenerator(tf.keras.utils.Sequence):
+
+    def __init__(self, df, batch_size=32, num_classes=None, shuffle=True):
+        self.batch_size = batch_size
+        self.df = df
+        self.indices = self.df.index.tolist()
+        self.num_classes = num_classes
+        self.shuffle = shuffle
+        self.on_epoch_end()
+
+    def __len__(self):
+        return len(self.indices) // self.batch_size
+
+    def __getitem__(self, index):
+        index = self.index[index * self.batch_size:(index + 1) * self.batch_size]
+        batch = [self.indices[k] for k in index]
+
+        X, y = self.__get_data(batch)
+        return X, y
+
+    def on_epoch_end(self):
+        self.index = np.arange(len(self.indices))
+        if self.shuffle == True:
+            np.random.shuffle(self.index)
+
+    def __get_data(self, batch):
+        X = self.df.iloc[batch]
+        y = np.array(X['label'])
+        padded_valid = process_sequence(X, kmer_count, kmers_dict)
+        return np.array(padded_valid), y
+
+
 if __name__ == "__main__":
+    
     output_dir = args.output_dir
     kmer_count = args.kmer_count
     kmer_length = args.kmer_length
@@ -200,7 +216,6 @@ if __name__ == "__main__":
     os.makedirs(output_dir, exist_ok=True)
 
     start_time = time.time()
-
     # Path to save model during training
     model_save_path = os.path.join(output_dir, 'saved_model')
 
@@ -217,6 +232,7 @@ if __name__ == "__main__":
 
     print("loading dataset...")
     # dataset_file = args.dataset_file
+    # logging.info('dataset used: {}'.format(dataset_file))
     # Prepare dataset
 
     # All possible kmers lookup dict
@@ -253,24 +269,20 @@ if __name__ == "__main__":
     logging.info(time_taken)
     print(time_taken)
 
-    print('saving final model...')
-    model.save(os.path.join(model_save_path, 'model_final.h5'))
-    logging.info('final trained model saved to: '.format(os.path.join(model_save_path, 'model_final.h5')))
-
     if args.do_test:
         if args.test_csv:
             logging.info("Results on test dataset: ")
             print("Testing on test set...")
             x_test, y_test = get_valid_dataset(pd.read_csv(args.test_csv))
             results = model.evaluate(x_test, y_test, batch_size=10240)
-            print('=' * 50)
-            print(f"Results on test dataset:")
-            print('-' * 50)
-            print(f"Loss: {results[0]:.6f}, \nAccuracy: {results[1]:.6f}, \nPrecision: {results[2]:.6f}, \nRecall: {results[3]:.6f}")
-            print('=' * 50)
+            print("Results on test dataset (Loss, Accu, Prec, Recall) :", results)
             logging.info(f"Results on test dataset (Loss, Accu, Prec, Recall) : {results}")
         else:
             print("--do_test is true but --test_csv file path is missing...")
 
-    print("done...")
+    print('saving final model...')
+    model.save(os.path.join(model_save_path, 'model_final.h5'))
+    logging.info('final trained model saved to: '.format(os.path.join(model_save_path, 'model_final.h5')))
+
+
 

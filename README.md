@@ -1,24 +1,34 @@
-# minicPRED
-the LSTM deep learning for predicting if a Pyricularia strain carries mini-chromosomes
+# miniC
+A LSTM deep learning for predicting if a Pyricularia strain carries supernumerary chromosomes (or mini-chromosomes)
 
-# Test
-To test the sequences, convert the sequence as a csv file with ```"sequence,strain,label"``` columns. For example: look into ```data/sample_data/test_set_sample.csv```.
-Run the ```test.py``` file as follows  
+# Installation
 
-```python test.py --saved_model path_to_saved_model --test_csv path_to_csv_file --kmer_length <kmer_length> --kmer_count <kmer_count>```  
 
-The parameters ```test.py``` file accepts are:  
+# Preparation
+Here, the example is inputing read data in FASTQ format. We will first removed sequences commonly found in both core and mini. The step is referred to be filtering.  
+```
+k=9
+kcount=11
+h5model=models/modelv1.0.k9c11.h5
+outbase=`basename $infq | sed 's/.fq.gz//g'; s/.fq//g'; s/.fastq//g'`
+filtfq=${outbase}.filt.fq.gz
 
-```--saved_model```: trained model name with full path  
-```--test_csv```: path to the test dataset file eg: /home/user/mini_prediction/train.csv  
-```--output_dir```: path to the results and log output folder  
-```--save_pred_seq```: whether to save the prediction score  
-```--prediction_threshold```: threshold for classifying the prediction to positive class label  
-```--batch_size```: size of a batch to use for processing large dataset while making the prediction  
-```--kmer_length```: size of kmer  
-```--kmer_count```: total number of kmers in a sequence  
-```--gpu```: gpu id to use  
+# filter
+infq_base=`basename $infq`
+bash utils/bowtie2.filt.sh $infq $filtfq
+```
 
-For e.g.  
+# Prediction
+Use the trained model for the prediction.
+```
+pred_prob_threshold=0.99
+python ../../../utils/minicPred.py \
+   --model_path $h5model \
+   --data_file $filtfq \
+   --kmer_length $k \
+   --kmer_count $kcount \
+   --output_dir . \
+   --prediction_threshold $pred_prob_threshold \
+   --save_pred_seq
+```
 
-```python test.py --saved_model "saved_model/model_final_k9-11.h5" --test_csv "data/sample_data/test_set_sample.csv" --kmer_length 9 --kmer_count 11 --save_pred_seq```
