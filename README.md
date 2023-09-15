@@ -2,7 +2,7 @@
 A LSTM deep learning for predicting if a *Pyricularia* strain carries supernumerary chromosomes (or mini-chromosomes)
 
 # Installation
-Python3.9 was tested. A virtual environment can be set up by using the software list in (requirements.txt)[installation/requirements.txt].
+Python3.9 was tested. A virtual environment can be set up by using the software list in [requirements.txt](installation/requirements.txt).
 ```
 pip install -r installation/requirements.txt
 ```
