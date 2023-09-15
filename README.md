@@ -1,8 +1,11 @@
 # miniC
-A LSTM deep learning for predicting if a Pyricularia strain carries supernumerary chromosomes (or mini-chromosomes)
+A LSTM deep learning for predicting if a *Pyricularia* strain carries supernumerary chromosomes (or mini-chromosomes)
 
 # Installation
-
+Python3.9 was tested. A virtual environment can be set up by using the software list in (requirements.txt)[installation/requirements.txt].
+```
+pip install -r installation/requirements.txt
+```
 
 # Preparation
 Here, the example is inputing read data in FASTQ format. We will first removed sequences commonly found in both core and mini. The step is referred to be filtering.  
