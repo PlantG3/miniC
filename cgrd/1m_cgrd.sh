@@ -22,6 +22,9 @@ ref=B71Ref2.fasta
 # bins using knum of 1000
 binbed=MoT_B71Ref2.knum1000.bin.bed
 
+# thread number
+ncpu=8
+
 # CGRD run
 perl ~/scripts2/CGRD/cgrd \
 	--ref $ref \
