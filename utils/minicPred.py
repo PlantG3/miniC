@@ -30,7 +30,7 @@ from tensorflow.keras import models
 def generate_all_kmers(kmer_length):
     """ Function to generate all possible kmers of given length"""
     base_pairs = ['A', 'T', 'G', 'C']
-    # Generate all 4 ^ kmer_length possible combinations of Kmers and lookup
+    # Generate all 4 ^ 7 possible combinations of Kmers and lookup
     all_kmers = {"".join(x): idx + 1 for idx, x in enumerate(list(product(base_pairs, repeat=kmer_length)))}
     return all_kmers
 
@@ -45,16 +45,17 @@ def process_sequence(sequences, sentence_length, kmer_mapping_dict):
     return padded_dataset
 
 
-def process_file(filename, kmer_length, kmer_count, lines_per_read=400000):
+def process_file(filename, kmer_length, kmer_count, lines_per_read=100000):
     """
     Function to read a .fq.gz file and extract the sequences present in each line. This function then read a sequences
 
-    1. It skips the sequences whose length is less than the required length, which equals to kmer_length x kmer_count
-    2. If the sequence length is too long, it takes the first required kmers and ignores the rest of the sequences
+    It skips the sequences whose length is less than required to make a test data of required kmer size and sequence
+    length. If the sequence length is too long, it takes the first <seq_length> kmers to create the required sentence
+    length and ignores the rest of the sequences
 
     :param filename: .fq.gz file to read. Required the complete path to the filename
-    :param kmer_length: bp of a k-mer
-    :param kmer_count: Numer of k-mers in a sequence
+    :param kmer_length: length of kmer to break the sequences into
+    :param kmer_count: length of the sequence of kmer.
     :return: a generator with the kmer sequences of required length
     """
 
@@ -88,6 +89,7 @@ def process_file(filename, kmer_length, kmer_count, lines_per_read=400000):
             yield sequences
 
 
+
 def test_file(data_dir, strain):
 
     total_strain_seq, total_mini_pred, total_core_pred = 0, 0, 0
@@ -95,10 +97,20 @@ def test_file(data_dir, strain):
 
     filename = os.path.join(data_dir, strain)
 
+    if args.save_pred_seq:
+        save_pred_file = os.path.join(args.output_dir, strain + '.detail.csv')
+        p_file = open(save_pred_file, 'w')
+        p_file.write('strain,sequence,pred_prob\n')
+
     for sequences in process_file(filename, kmer_length, kmer_count):
         batch_count += 1
         x_test = process_sequence(sequences, kmer_count, kmers_dict)
         y_pred = model.predict(x_test)
+
+        if args.save_pred_seq:
+            for seq, pprob in zip(sequences, y_pred):
+                p_file.write(f"{strain},{seq},{pprob[0]}\n")
+
         pred_labels = (y_pred > args.prediction_threshold).astype('int32')
 
         total_seq = len(pred_labels)
@@ -125,21 +137,27 @@ def test_file(data_dir, strain):
     if args.test_on_sample_batch:
         is_sample_batch = '(Using sampled batch)'
     
+    # output the final prediction
+    save_pred_file = os.path.join(args.output_dir, strain + '.final.csv')
+    o_file = open(save_pred_file, 'w')
+    o_file.write('data,totalSeq,mini,core,mini_percent,core_percent\n')
+    o_file.write('{},{},{},{},{},{}\n'.format(strain, total_strain_seq, total_mini_pred[0], total_core_pred[0], mini_percent[0], core_percent[0]))
+    o_file.close()
+
     if args.save_pred_seq:
-        save_pred_file = os.path.join(args.output_dir, strain + '.csv')
-        p_file = open(save_pred_file, 'w')
-        p_file.write('data,totalSeq,mini,core,mini_percent,core_percent\n')
-        p_file.write('{},{},{},{},{},{}\n'.format(strain, total_strain_seq, total_mini_pred[0], total_core_pred[0], mini_percent[0], core_percent[0]))
-        #p_file.write('{},{},{!s},{!s}, %s, %s\n'.format(strain, total_strain_seq, total_mini_pred, total_core_pred, mini_percent, core_percent))
         p_file.close()
+
+    logging.info("data,totalSeq,mini,core,mini_percent,core_percent")
+    logging.info("{},{},{},{},{},{}\n".format(strain, total_strain_seq, total_mini_pred[0], total_core_pred[0], mini_percent[0], core_percent[0]))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--model_path', type=str, required=True, default=None, help="trained model name with full path")
     parser.add_argument('--output_dir', type=str, required=True, default='', help='path to the output folder')
     parser.add_argument('--data_file', type=str, default='', help="test datafile in beocat with full path")
-    parser.add_argument('--kmer_length', type=int, default=9, help='size of kmer')
-    parser.add_argument('--kmer_count', type=int, default=11, help='total number of kmers to use in a sequence')
+    parser.add_argument('--kmer_length', type=int, default=7, help='size of kmer')
+    parser.add_argument('--kmer_count', type=int, default=15, help='total number of kmers to use in a sequence')
     parser.add_argument('--prediction_threshold', type=float, default=0.95, help='threshold for classification')
     parser.add_argument('--save_pred_seq', action="store_true",
                         help="whether to save all the predicted sequences and their prediction probabilities")
@@ -169,7 +187,7 @@ if __name__ == "__main__":
         else:
             files_dir = "."
             strain = args.data_file
-        logging_file = os.path.join(args.output_dir, strain + '_results.log')
+        logging_file = os.path.join(args.output_dir, strain + '.batch.log')
         logging.basicConfig(filename=logging_file, level=logging.DEBUG, filemode='w')
         # prediction
         test_file(files_dir, strain)
