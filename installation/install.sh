@@ -1,5 +1,6 @@
+# Python version 3.9.6
+# module load Python/3.9.6-GCCcore-11.2.0
 cd ~/venvs/
-module load Python/3.9.6-GCCcore-11.2.0
 virtualenv minicLSTM
 source ~/venvs/minicLSTM/bin/activate
 # requirement
