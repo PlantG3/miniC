@@ -1,0 +1,31 @@
+#!/bin/bash -l
+##SBATCH --array=1-$njob
+##SBATCH --mem=32G
+##SBATCH --time=1-00:00:00
+##SBATCH --nodes=1
+##SBATCH --ntasks-per-node=16
+##SBATCH --gres=gpu:geforce_rtx_2080_ti:1
+##SBATCH --gres=killable:1
+##SBATCH --partition=ksu-gen-gpu.q
+
+version=0.2.0
+
+efas=`sed -n $SLURM_ARRAY_TASK_ID"p" $fasta_list`
+
+. "/homes/liu3zhen/anaconda3/etc/profile.d/conda.sh"
+conda activate minic
+
+k=9
+kcount=11
+pred_threshold=0.5
+
+### prediction
+gzip $efas
+python $minicPred \
+	--model_path $h5model \
+	--data_file ${efas}.gz \
+	--kmer_length $k \
+	--kmer_count $kcount \
+	--output_dir $pred_dir \
+	--prediction_threshold $pred_threshold
+

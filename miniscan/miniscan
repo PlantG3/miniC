@@ -1,0 +1,157 @@
+#!/bin/bash
+# by Sanzhen Liu
+# 1/2024
+
+version=0.01;
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+usage() {
+	echo -e "${RED}Prerequirement${NC}: bedtools"
+	echo -e "${RED}Usage${NC}: $0 -f <fasta> [other options]" >&2
+	echo "       -f: fasta; required" >&2
+	echo "       -o: outdir (.)" >&2
+	echo "       -p: prefix (basename of -f after removing suffix)" >&2
+	echo "       -l: sequence length minimal requirment (500000 bp)" >&2
+	echo "       -m: model (model_9_11_01262024.h5)" >&2
+	echo "       -w: window size (30000 bp)" >&2
+	echo "       -s: step (15000 bp)" >&2
+	echo "       -c: number of cpus (8)" >&2
+	echo "       -g: mem in Gb" >&2
+	echo "       -t: run time per job" >&2
+	echo "       -x: cleanup" >&2
+	echo "       -v: version" >&2
+	echo "       -h: help information" >&2
+}
+
+while getopts ":f:o:s:p:l:m:w:c:g:t:yxvh" opt; do
+
+case $opt in
+	f) fasta=$OPTARG;;
+	o) outdir=$OPTARG;;
+	p) prefix=$OPTARG;;
+	m) model=$OPTARG;;
+	l) lowest=$OPTARG;;
+	w) win=$OPTARG;;
+	s) step=$OPTARG;; 
+	c) cpu=$OPTARG;;
+	g) mem=$OPTARG;;
+	t) runtime=$OPTARG;;
+	x) cleanup=1;;
+	v) echo $version; exit;;
+	h) usage; exit;;
+\?) echo "Invalid options: -$OPTARG." >&2; exit;;
+:) echo "Option -$OPTARG requires an argument" >&2; exit;;
+esac
+done
+
+### check required parameters
+if [ -z $fasta ]; then
+	echo -e "${RED}ERROR${NC}: Required parameters: -f." >&2
+	usage;
+	exit;
+fi
+
+if [ -z $prefix ]; then
+	prefix=`basename $fasta | sed 's/.fasta$//g; s/.fas$//g; s/.fa$//g; s/.fna$//g'`
+fi
+
+if [ -z $outdir ]; then
+	outdir=.
+fi
+
+if [ -z $lowest ]; then
+	lowest=500000
+fi
+
+if [ -z $win ]; then
+	win=30000
+fi
+
+if [ -z $step ]; then
+	step=15000
+fi
+
+if [ -z $cpu ]; then
+	cpu=8
+fi
+
+if [ -z $mem ]; then
+	mem=2
+fi
+
+if [ -z $runtime ]; then
+	runtime=1-00:00:00
+fi
+
+# directory of miniscan
+miniscan_dir=`dirname $0`
+
+# create directories
+create_dir () {
+	dir_to_create=$1
+	if [ ! -d $dir_to_create ]; then
+		mkdir $dir_to_create
+	fi
+}
+##################################
+### step 1: data split
+##################################
+export indata_dir=$outdir/1_seq_${prefix}
+create_dir $indata_dir
+perl $miniscan_dir/miniscanUtils/fastaSize.pl $fasta | sort -k1 \
+	| awk -v m=$lowest '{ if ($2 >= m) print }' > $indata_dir/${prefix}.1.length
+bedtools makewindows -g $indata_dir/${prefix}.1.length -w $win -s $step > $indata_dir/${prefix}.1.bed
+bedtools getfasta -fi $fasta -bed $indata_dir/${prefix}.1.bed -fo $indata_dir/${prefix}.1.frag.fasta
+
+perl $miniscan_dir/miniscanUtils/faslines.pl \
+	--linelen 99 --outdir $indata_dir $indata_dir/${prefix}.1.frag.fasta
+
+# cleanup
+rm $indata_dir/${prefix}.1*
+
+##################################
+### step 2: prediction
+##################################
+export pred_dir=$outdir/2_pred_${prefix}
+create_dir $pred_dir
+
+export log_dir=$outdir/0_log_${prefix}
+create_dir $log_dir
+
+export fasta_list=$pred_dir/${prefix}.2.list
+ls $indata_dir/* -1 > $fasta_list
+njob=`wc -l $fasta_list | sed 's/ .*//'`
+export minicPred=$miniscan_dir/../utils/minicPred.py
+if [ -z $model ]; then
+	model=`realpath $miniscan_dir/../models/model_9_11_01262024.h5`
+fi
+export h5model=$model
+
+# submit array jobs
+jidinfo=$(sbatch \
+	--array=1-$njob \
+	--output=${log_dir}/${prefix}_%A_%a.log \
+	--error=${log_dir}/${prefix}_%A_%a.log \
+	--mem="$mem"G \
+	--time=$runtime \
+	--cpus-per-task=$cpu \
+	--gres=gpu:geforce_rtx_2080_ti:1 \
+	--partition=ksu-gen-gpu.q \
+	$miniscan_dir/miniscanUtils/batch_minicPred.sh)
+
+##################################
+### step 3: merge, plot, cleanup
+##################################
+export table_output=${outdir}/${prefix}.minic.txt
+jid=$(echo $jidinfo | sed 's/.* //g')
+export cleanup
+export fasta
+export outdir
+export prefix
+export rplot_script=$miniscan_dir/miniscanUtils/miniscanPlot.R
+sbatch --dependency=afterany:$jid \
+	--output=${log_dir}/${prefix}_merge_%j.log \
+	--error=${log_dir}/${prefix}_merge_%j.log \
+	$miniscan_dir/miniscanUtils/predOutput.sh
+
