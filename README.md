@@ -44,6 +44,19 @@ data,totalSeq,mini,core,mini_percent,core_percent
 B71.R1.filt.fq.gz,14386540,473280,13913260,0.032897,0.967103
 ```
 
+# miniscan
+The Shell script miniscan can run in a Slurm system and scan genomic regions for miniC scores.  
+
+Here is an example run and the result is in [testoutput](https://github.com/PlantG3/miniC/tree/main/miniscan/testoutput).   
+```
+bash miniscan \
+	-f testdata/test.fasta \
+	-o testoutput \
+	-w 100000 \
+	-s 100000 \
+	-x
+```
+
 # Citation
 N Gyawali, Y Hao, G Lin, J Huang, R Bika, LC Daza, H Zheng, G Cruppe, D Caragea, D Cook, B Valent, S Liu. (2024). Using recurrent neural networks to detect supernumerary chromosomes in fungal strains causing blast diseases, NAR Genomics and Bioinformatics, 6:[lqae108](https://doi.org/10.1093/nargab/lqae108)
 
