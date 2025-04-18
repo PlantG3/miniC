@@ -45,5 +45,5 @@ B71.R1.filt.fq.gz,14386540,473280,13913260,0.032897,0.967103
 ```
 
 # Citation
-<to be added>
+N Gyawali, Y Hao, G Lin, J Huang, R Bika, LC Daza, H Zheng, G Cruppe, D Caragea, D Cook, B Valent, S Liu. (2024). Using recurrent neural networks to detect supernumerary chromosomes in fungal strains causing blast diseases, NAR Genomics and Bioinformatics, 6:[lqae108](https://doi.org/10.1093/nargab/lqae108)
 
