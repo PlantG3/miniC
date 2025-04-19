@@ -47,7 +47,7 @@ B71.R1.filt.fq.gz,14386540,473280,13913260,0.032897,0.967103
 # miniscan
 The Shell script [miniscan](https://raw.githubusercontent.com/PlantG3/miniC/refs/heads/main/miniscan/miniscan) was developed to scan genomic regions for miniC scores. The script is designed to run in a Slurm system.  
 
-Here is an example run and the result is in [testoutput](https://github.com/PlantG3/miniC/tree/main/miniscan/testoutput). This script scans non-overlapping 100 kb windows (defined by using -w 100000 -s 100000) of each sequence in test.fasta and returns miniC values of 100-kb windows. Parameter "-w" defines the window size and parameter "-s" defines the step size. Paameter "-x" enables a cleanup to remove intermediated outputs.  
+Here is an example run and the result is in [testoutput](https://github.com/PlantG3/miniC/tree/main/miniscan/testoutput). This script scans non-overlapping 100 kb windows (defined by using -w 100000 -s 100000) of each sequence in test.fasta and returns miniC values of 100-kb windows. Parameter "-w" defines the window size and parameter "-s" defines the step size. Parameter "-x" enables a cleanup to remove intermediated outputs.  
 ```
 bash miniscan \
 	-f testdata/test.fasta \
