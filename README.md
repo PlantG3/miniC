@@ -8,7 +8,7 @@ pip install -r installation/requirements.txt
 ```
 
 # Preparation
-Here, the example is inputing read data in FASTQ format. We will first removed sequences commonly found in both core and mini. The step is referred to be filtering.  
+Here, Input read data are in FASTQ format. The process firstly removes sequences commonly found in both core and mini, which is referred to as the filtering step.  
 ```
 k=9
 kcount=11
@@ -22,7 +22,7 @@ bash utils/bowtie2.filt.sh $infq $filtfq
 ```
 
 # Prediction
-Use the trained model for the prediction. The current model can be downloaded from [here](https://people.beocat.ksu.edu/~liu3zhen/models/model_final.h5)
+This step uses a trained model for the prediction. The current trained model can be downloaded from [here](https://people.beocat.ksu.edu/~liu3zhen/models/model_final.h5).
 
 ```
 h5model=<path_to_model>
@@ -45,9 +45,9 @@ B71.R1.filt.fq.gz,14386540,473280,13913260,0.032897,0.967103
 ```
 
 # miniscan
-The Shell script miniscan can run in a Slurm system and scan genomic regions for miniC scores.  
+The Shell script [miniscan](https://raw.githubusercontent.com/PlantG3/miniC/refs/heads/main/miniscan/miniscan) was developed to scan genomic regions for miniC scores. The script is designed to run in a Slurm system.  
 
-Here is an example run and the result is in [testoutput](https://github.com/PlantG3/miniC/tree/main/miniscan/testoutput). This script scans non-overlapping 100 kb windows (defined by using -w 100000 -s 100000) of each sequence in test.fasta and returns miniC values of 100-kb windows. Parameter "-w" defines the window size and parameter "-s" defines the step size.  
+Here is an example run and the result is in [testoutput](https://github.com/PlantG3/miniC/tree/main/miniscan/testoutput). This script scans non-overlapping 100 kb windows (defined by using -w 100000 -s 100000) of each sequence in test.fasta and returns miniC values of 100-kb windows. Parameter "-w" defines the window size and parameter "-s" defines the step size. Paameter "-x" enables a cleanup to remove intermediated outputs.  
 ```
 bash miniscan \
 	-f testdata/test.fasta \
